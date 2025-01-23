@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import User from "../models/User";
 import bcrypt from "bcryptjs";
+import { generateToken } from "../services/jwtService";
 
-const createUser = async (req: Request, res: Response) => {
+const createUser = async (req: Request, res: Response):Promise<any> => {
   try {
     const { name, email, password, role } = req.body;
 
@@ -28,3 +29,30 @@ const createUser = async (req: Request, res: Response) => {
     return res.status(500).json({ msg: (error as any).message });
   }
 };
+
+const login = async (req: Request, res: Response):Promise<any> => {
+  try {
+    const { email, password } = req.body;
+    const userExist = await User.findOne({ where: email });
+
+    if (!userExist) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    const comparePassword = await bcrypt.compare(password, userExist.password);
+    if (!comparePassword) {
+      return res.status(400).json({
+        msg: "Password is wrong.!! try again",
+      });
+    }
+
+    const token = generateToken(userExist.id, userExist.email);
+
+    return res.status(200).json({ msg: "Logged successfully", token });
+  } catch (error) {
+    console.log("eror while loggin in", error);
+    return res.status(500).json({ msg: "failed to login" });
+  }
+};
+
+export default {createUser,login}
